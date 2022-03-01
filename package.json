@@ -20,7 +20,6 @@
     "end-to-end-test": "jest --roots=tests/end-to-end --testTimeout=300000 --runInBand"
   },
   "devDependencies": {
-    "valid-filename": "^4.0.0",
     "@types/jest": "^27.0.1",
     "dotenv": "^10.0.0",
     "execa": "^5.1.1",

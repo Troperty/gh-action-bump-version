@@ -3,7 +3,7 @@ const { execSync, spawn } = require('child_process');
 const { existsSync } = require('fs');
 const { EOL } = require('os');
 const path = require('path');
-const { isValidFilename } = require('valid-filename');
+
 
 // Change working directory if user defined PACKAGEJSON_DIR
 if (process.env.PACKAGEJSON_DIR) {
@@ -270,6 +270,22 @@ function runInWorkspaceWithShell(command, args) {
       }
     });
   });
+}
+
+function isValidFilename(string) {
+	if (!string || string.length > 255) {
+		return false;
+	}
+
+	if (/[<>:"/\\|?*\u0000-\u001F]/g.test(string) || /^(con|prn|aux|nul|com\d|lpt\d)$/i.test(string)) {
+		return false;
+	}
+
+	if (string === '.' || string === '..') {
+		return false;
+	}
+
+	return true;
 }
 
 function runInWorkspace(command, args) {
