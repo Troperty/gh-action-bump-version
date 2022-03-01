@@ -258,7 +258,7 @@ function runInWorkspaceWithShell(command, args) {
         reject(error);
       }
     });
-    child.stderr.on('data', (chunk) => errorMessages.push(chunk));
+    
     child.on('exit', (code) => {
       if (!isDone) {
         if (code === 0) {
