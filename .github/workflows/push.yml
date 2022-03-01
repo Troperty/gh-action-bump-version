@@ -22,7 +22,7 @@ jobs:
         uses: 'SudevAtST/gh-action-bump-version@master'
         with:
           tag-prefix: 'v'
-          extra-version-file: 'version.info'
+          extra-version-file: 'an$invalid:filename'
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           GITHUB_USER: 'CI-System'
