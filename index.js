@@ -161,6 +161,13 @@ const workspace = process.env.GITHUB_WORKSPACE;
     console.log('current:', current, '/', 'version:', version);
     let newVersion = execSync(`npm version --git-tag-version=false ${version}`).toString().trim().replace(/^v/, '');
     newVersion = `${tagPrefix}${newVersion}`;
+    
+    if(extraVersionFile !== '') {
+      console.log(`Writing ${newVersion} to ${extraVersionFile}`);
+      await runInWorkspace('echo', [newVersion, '>', extraVersionFile]);
+      await runInWorkspace('cat', [extraVersionFile]);
+    }
+
     if (process.env['INPUT_SKIP-COMMIT'] !== 'true') {
       await runInWorkspace('git', ['commit', '-a', '-m', commitMessage.replace(/{{version}}/g, newVersion)]);
     }
@@ -175,10 +182,6 @@ const workspace = process.env.GITHUB_WORKSPACE;
     console.log('current:', current, '/', 'version:', version);
     newVersion = execSync(`npm version --git-tag-version=false ${version}`).toString().trim().replace(/^v/, '');
     newVersion = `${tagPrefix}${newVersion}`;
-    if(extraVersionFile !== '') {
-      console.log(`Writing ${newVersion} to ${extraVersionFile}`);
-      await runInWorkspace('echo', [newVersion, '>', extraVersionFile]);
-    }
     console.log(`::set-output name=newTag::${newVersion}`);
     try {
       // to support "actions/checkout@v1"
