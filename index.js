@@ -165,14 +165,14 @@ const workspace = process.env.GITHUB_WORKSPACE;
     if(extraVersionFile !== '') {
       await runInWorkspace('touch', [extraVersionFile]);
       console.log(`Writing ${newVersion} to ${extraVersionFile}`);
-      await runInWorkspace('echo', [newVersion, '>', extraVersionFile]);
+      await runInWorkspaceWithShell('echo', [newVersion, '>', extraVersionFile]);
       await runInWorkspace('cat', [extraVersionFile]);
     }
 
 
 
     if (process.env['INPUT_SKIP-COMMIT'] !== 'true') {
-      await runInWorkspace('git', ['status']);
+      await runInWorkspaceWithShell('git', ['status']);
       await runInWorkspace('git', ['commit', '-a', '-m', commitMessage.replace(/{{version}}/g, newVersion)]);
     }
 
@@ -187,9 +187,18 @@ const workspace = process.env.GITHUB_WORKSPACE;
     newVersion = execSync(`npm version --git-tag-version=false ${version}`).toString().trim().replace(/^v/, '');
     newVersion = `${tagPrefix}${newVersion}`;
     console.log(`::set-output name=newTag::${newVersion}`);
+
+    if(extraVersionFile !== '') {
+      await runInWorkspace('touch', [extraVersionFile]);
+      console.log(`Writing ${newVersion} to ${extraVersionFile}`);
+      await runInWorkspaceWithShell('echo', [newVersion, '>', extraVersionFile]);
+      await runInWorkspace('cat', [extraVersionFile]);
+    }
+
     try {
       // to support "actions/checkout@v1"
       if (process.env['INPUT_SKIP-COMMIT'] !== 'true') {
+        await runInWorkspaceWithShell('git', ['status']);
         await runInWorkspace('git', ['commit', '-a', '-m', commitMessage.replace(/{{version}}/g, newVersion)]);
       }
     } catch (e) {
@@ -237,6 +246,29 @@ function exitFailure(message) {
 
 function logError(error) {
   console.error(`✖  fatal     ${error.stack || error}`);
+}
+function runInWorkspaceWithShell(command, args) {
+  return new Promise((resolve, reject) => {
+    const child = spawn(command, args, { cwd: workspace, shell: true, stdio: 'inherit' });
+    let isDone = false;
+    const errorMessages = [];
+    child.on('error', (error) => {
+      if (!isDone) {
+        isDone = true;
+        reject(error);
+      }
+    });
+    child.stderr.on('data', (chunk) => errorMessages.push(chunk));
+    child.on('exit', (code) => {
+      if (!isDone) {
+        if (code === 0) {
+          resolve();
+        } else {
+          reject(`${errorMessages.join('')}${EOL}${command} exited with code ${code}`);
+        }
+      }
+    });
+  });
 }
 
 function runInWorkspace(command, args) {
