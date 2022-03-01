@@ -52,8 +52,10 @@ const workspace = process.env.GITHUB_WORKSPACE;
   // patch is by default empty, and '' would always be true in the includes(''), thats why we handle it separately
   const patchWords = process.env['INPUT_PATCH-WORDING'] ? process.env['INPUT_PATCH-WORDING'].split(',') : null;
   const preReleaseWords = process.env['INPUT_RC-WORDING'] ? process.env['INPUT_RC-WORDING'].split(',') : null;
+  const extraVersionFile = process.env['INPUT_EXTRA-VERSION-FILE'];
 
   console.log('config words:', { majorWords, minorWords, patchWords, preReleaseWords });
+  console.log('Extra Version File:', extraVersionFile);
 
   // get default version bump
   let version = process.env.INPUT_DEFAULT;
@@ -173,6 +175,10 @@ const workspace = process.env.GITHUB_WORKSPACE;
     console.log('current:', current, '/', 'version:', version);
     newVersion = execSync(`npm version --git-tag-version=false ${version}`).toString().trim().replace(/^v/, '');
     newVersion = `${tagPrefix}${newVersion}`;
+    if(extraVersionFile !== '') {
+      console.log(`Writing ${newVersion} to ${extraVersionFile}`);
+      await runInWorkspace('echo', [newVersion, '>', extraVersionFile]);
+    }
     console.log(`::set-output name=newTag::${newVersion}`);
     try {
       // to support "actions/checkout@v1"
