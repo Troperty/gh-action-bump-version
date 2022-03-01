@@ -167,7 +167,6 @@ Example:
     bump-policy: 'ignore'
 ```
 
-
 #### **extra-version-file:**
 Writes version to additional file specified.
 
