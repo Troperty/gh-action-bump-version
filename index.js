@@ -168,11 +168,9 @@ const workspace = process.env.GITHUB_WORKSPACE;
       console.log(`Writing ${newVersion} to ${extraVersionFile}`);
       await runInWorkspaceWithShell('echo', [newVersion, '>', extraVersionFile]);
       await runInWorkspace('git', ['add', extraVersionFile]);
-      await runInWorkspaceWithShell('cat', [extraVersionFile]);
     }
 
     if (process.env['INPUT_SKIP-COMMIT'] !== 'true') {
-      await runInWorkspaceWithShell('git', ['status']);
       await runInWorkspace('git', ['commit', '-a', '-m', commitMessage.replace(/{{version}}/g, newVersion)]);
     }
 
@@ -193,13 +191,11 @@ const workspace = process.env.GITHUB_WORKSPACE;
       console.log(`Writing ${newVersion} to ${extraVersionFile}`);
       await runInWorkspaceWithShell('echo', [newVersion, '>', extraVersionFile]);
       await runInWorkspace('git', ['add', extraVersionFile]);
-      await runInWorkspaceWithShell('cat', [extraVersionFile]);
     }
 
     try {
       // to support "actions/checkout@v1"
       if (process.env['INPUT_SKIP-COMMIT'] !== 'true') {
-        await runInWorkspaceWithShell('git', ['status']);
         await runInWorkspace('git', ['commit', '-a', '-m', commitMessage.replace(/{{version}}/g, newVersion)]);
       }
     } catch (e) {
