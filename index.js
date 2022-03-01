@@ -3,6 +3,7 @@ const { execSync, spawn } = require('child_process');
 const { existsSync } = require('fs');
 const { EOL } = require('os');
 const path = require('path');
+const { isValidFilename } = require('valid-filename');
 
 // Change working directory if user defined PACKAGEJSON_DIR
 if (process.env.PACKAGEJSON_DIR) {
@@ -52,7 +53,7 @@ const workspace = process.env.GITHUB_WORKSPACE;
   // patch is by default empty, and '' would always be true in the includes(''), thats why we handle it separately
   const patchWords = process.env['INPUT_PATCH-WORDING'] ? process.env['INPUT_PATCH-WORDING'].split(',') : null;
   const preReleaseWords = process.env['INPUT_RC-WORDING'] ? process.env['INPUT_RC-WORDING'].split(',') : null;
-  const extraVersionFile = process.env['INPUT_EXTRA-VERSION-FILE'];
+  const extraVersionFile = isValidFilename(process.env['INPUT_EXTRA-VERSION-FILE']) ? process.env['INPUT_EXTRA-VERSION-FILE'] : '';
 
   console.log('config words:', { majorWords, minorWords, patchWords, preReleaseWords });
   console.log('Extra Version File:', extraVersionFile);
@@ -169,8 +170,6 @@ const workspace = process.env.GITHUB_WORKSPACE;
       await runInWorkspace('git', ['add', extraVersionFile]);
       await runInWorkspaceWithShell('cat', [extraVersionFile]);
     }
-
-
 
     if (process.env['INPUT_SKIP-COMMIT'] !== 'true') {
       await runInWorkspaceWithShell('git', ['status']);
