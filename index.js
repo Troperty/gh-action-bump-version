@@ -166,7 +166,8 @@ const workspace = process.env.GITHUB_WORKSPACE;
       await runInWorkspace('touch', [extraVersionFile]);
       console.log(`Writing ${newVersion} to ${extraVersionFile}`);
       await runInWorkspaceWithShell('echo', [newVersion, '>', extraVersionFile]);
-      await runInWorkspace('cat', [extraVersionFile]);
+      await runInWorkspace('git', ['add', extraVersionFile]);
+      await runInWorkspaceWithShell('cat', [extraVersionFile]);
     }
 
 
@@ -192,7 +193,8 @@ const workspace = process.env.GITHUB_WORKSPACE;
       await runInWorkspace('touch', [extraVersionFile]);
       console.log(`Writing ${newVersion} to ${extraVersionFile}`);
       await runInWorkspaceWithShell('echo', [newVersion, '>', extraVersionFile]);
-      await runInWorkspace('cat', [extraVersionFile]);
+      await runInWorkspace('git', ['add', extraVersionFile]);
+      await runInWorkspaceWithShell('cat', [extraVersionFile]);
     }
 
     try {

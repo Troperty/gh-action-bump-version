@@ -178,7 +178,7 @@ Example:
   env:
     GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
   with:
-    extra-version-file: './version.info'
+    extra-version-file: 'version.info'
 ```
 
 #### [DEPRECATED] **push:**
