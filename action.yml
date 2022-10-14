@@ -40,7 +40,7 @@ inputs:
     required: false
   skip-push:
     description: 'If true, skip pushing any commits or tags created after the version bump'
-    default: false
+    default: 'false'
     required: false
   PACKAGEJSON_DIR:
     description: 'Custom dir to the package'
@@ -65,6 +65,14 @@ inputs:
   bump-policy:
     description: 'Set version bump ignore policy'
     default: 'all'
+    required: false
+  extra-version-file:
+    description: 'Prints new version to specified file'
+    default: ''
+    required: false
+  extra-package-dir:
+    description: 'Additional package.json files for version bump'
+    default: ''
     required: false
   push:
     description: '[DEPRECATED] Set to false to skip pushing the new tag'

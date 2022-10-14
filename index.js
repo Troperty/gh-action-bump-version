@@ -1,8 +1,11 @@
 // test
-const { execSync, spawn } = require('child_process');
-const { existsSync } = require('fs');
-const { EOL } = require('os');
-const path = require('path');
+import { execSync, spawn } from 'node:child_process';
+import { existsSync, fstat, readFileSync } from 'node:fs';
+import { EOL } from 'node:os';
+import path from 'node:path';
+import { readPackage, readPackageSync } from 'read-pkg';
+import { writePackage } from 'write-pkg';
+
 
 // Change working directory if user defined PACKAGEJSON_DIR
 if (process.env.PACKAGEJSON_DIR) {
@@ -11,15 +14,19 @@ if (process.env.PACKAGEJSON_DIR) {
 }
 
 const workspace = process.env.GITHUB_WORKSPACE;
-const pkg = getPackageJson();
 
 (async () => {
-  const event = process.env.GITHUB_EVENT_PATH ? require(process.env.GITHUB_EVENT_PATH) : {};
+  const pkg = getPackageJson();
+  const event = process.env.GITHUB_EVENT_PATH ? getEventData(process.env.GITHUB_EVENT_PATH) : {};
 
   if (!event.commits && !process.env['INPUT_VERSION-TYPE']) {
     console.log("Couldn't find any commits in this event, incrementing patch version...");
   }
-
+  const extraPackagesDirectory = process.env['INPUT_EXTRA-PACKAGE-DIR'];
+  var extraPackages = [];
+  if (extraPackagesDirectory) {
+    extraPackages = extraPackagesDirectory.split(":");
+  }
   const allowedTypes = ['major', 'minor', 'patch', 'rc']
   if (process.env['INPUT_VERSION-TYPE'] && !allowedTypes.includes(process.env['INPUT_VERSION-TYPE'])) {
     exitFailure('Invalid version type');
@@ -60,8 +67,10 @@ const pkg = getPackageJson();
   // patch is by default empty, and '' would always be true in the includes(''), thats why we handle it separately
   const patchWords = process.env['INPUT_PATCH-WORDING'] ? process.env['INPUT_PATCH-WORDING'].split(',') : null;
   const preReleaseWords = process.env['INPUT_RC-WORDING'] ? process.env['INPUT_RC-WORDING'].split(',') : null;
+  const extraVersionFile = isValidFilename(process.env['INPUT_EXTRA-VERSION-FILE']) ? process.env['INPUT_EXTRA-VERSION-FILE'] : '';
 
   console.log('config words:', { majorWords, minorWords, patchWords, preReleaseWords });
+  console.log('Extra Version File:', extraVersionFile);
 
   // get default version bump
   let version = process.env.INPUT_DEFAULT;
@@ -182,6 +191,22 @@ const pkg = getPackageJson();
     let newVersion = execSync(`npm version --git-tag-version=false ${version}`).toString().trim().replace(/^v/, '');
     console.log('newVersion 1:', newVersion);
     newVersion = `${tagPrefix}${newVersion}`;
+
+    if (extraVersionFile !== '') {
+      await runInWorkspace('touch', [extraVersionFile]);
+      console.log(`Writing ${newVersion} to ${extraVersionFile}`);
+      await runInWorkspaceWithShell('echo', [newVersion, '>', extraVersionFile]);
+      await runInWorkspace('git', ['add', extraVersionFile]);
+    }
+
+    if (extraPackages.length > 0) {
+      for (let idx = 0; idx < extraPackages.length; idx++) {
+        let packageExtraDirectory = path.join(workspace, extraPackages[idx]);
+        await updatePackageJson(packageExtraDirectory, newVersion);
+        await runInDirectory('git', packageExtraDirectory, ['add', 'package.json']);
+      }
+    }
+
     if (process.env['INPUT_SKIP-COMMIT'] !== 'true') {
       await runInWorkspace('git', ['commit', '-a', '-m', commitMessage.replace(/{{version}}/g, newVersion)]);
     }
@@ -203,6 +228,22 @@ const pkg = getPackageJson();
     newVersion = `${tagPrefix}${newVersion}`;
     console.log(`newVersion after merging tagPrefix+newVersion: ${newVersion}`);
     console.log(`::set-output name=newTag::${newVersion}`);
+
+    if (extraVersionFile !== '') {
+      await runInWorkspace('touch', [extraVersionFile]);
+      console.log(`Writing ${newVersion} to ${extraVersionFile}`);
+      await runInWorkspaceWithShell('echo', [newVersion, '>', extraVersionFile]);
+      await runInWorkspace('git', ['add', extraVersionFile]);
+    }
+
+    if (extraPackages.length > 0) {
+      for (let idx = 0; idx < extraPackages.length; idx++) {
+        let packageExtraDirectory = path.join(workspace, extraPackages[idx]);
+        await updatePackageJson(packageExtraDirectory, newVersion);
+        await runInDirectory('git', packageExtraDirectory, ['add', 'package.json']);
+      }
+    }
+
     try {
       // to support "actions/checkout@v1"
       if (process.env['INPUT_SKIP-COMMIT'] !== 'true') {
@@ -211,7 +252,7 @@ const pkg = getPackageJson();
     } catch (e) {
       console.warn(
         'git commit failed because you are using "actions/checkout@v2"; ' +
-          'but that doesnt matter because you dont need that git commit, thats only for "actions/checkout@v1"',
+        'but that doesnt matter because you dont need that git commit, thats only for "actions/checkout@v1"',
       );
     }
 
@@ -238,7 +279,8 @@ const pkg = getPackageJson();
 function getPackageJson() {
   const pathToPackage = path.join(workspace, 'package.json');
   if (!existsSync(pathToPackage)) throw new Error("package.json could not be found in your project's root.");
-  return require(pathToPackage);
+  return JSON.parse(readFileSync(pathToPackage, {encoding:'utf8', flag:'r'}));
+  //return readPackageSync({cwd: pathToPackage});
 }
 
 function exitSuccess(message) {
@@ -253,6 +295,52 @@ function exitFailure(message) {
 
 function logError(error) {
   console.error(`✖  fatal     ${error.stack || error}`);
+}
+function runInWorkspaceWithShell(command, args) {
+  return new Promise((resolve, reject) => {
+    const child = spawn(command, args, { cwd: workspace, shell: true, stdio: 'inherit' });
+    let isDone = false;
+    const errorMessages = [];
+    child.on('error', (error) => {
+      if (!isDone) {
+        isDone = true;
+        reject(error);
+      }
+    });
+
+    child.on('exit', (code) => {
+      if (!isDone) {
+        if (code === 0) {
+          resolve();
+        } else {
+          reject(`${errorMessages.join('')}${EOL}${command} exited with code ${code}`);
+        }
+      }
+    });
+  });
+}
+
+function getEventData(filePath){
+  if(existsSync(filePath))
+  {
+    return JSON.parse(readFileSync(filePath, {encoding:'utf8', flag:'r'}));
+  }
+}
+
+function isValidFilename(string) {
+  if (!string || string.length > 255) {
+    return false;
+  }
+
+  if (/[<>:"/\\|?*\u0000-\u001F]/g.test(string) || /^(con|prn|aux|nul|com\d|lpt\d)$/i.test(string)) {
+    return false;
+  }
+
+  if (string === '.' || string === '..') {
+    return false;
+  }
+
+  return true;
 }
 
 function runInWorkspace(command, args) {
@@ -278,4 +366,39 @@ function runInWorkspace(command, args) {
     });
   });
   //return execa(command, args, { cwd: workspace });
+}
+
+async function updatePackageJson(directory, suppliedVersion) {
+  console.debug(`Updating package in ${directory}`);
+  let currentPJson = await readPackage({cwd: directory});
+  currentPJson.version = suppliedVersion;
+  currentPJson._id = `${currentPJson.name}@${suppliedVersion}`;
+  console.debug(currentPJson);
+  await writePackage(path.join(directory, 'package.json'), currentPJson);
+  let newPJson = await readPackage({cwd: directory});
+  console.debug(newPJson);
+}
+
+function runInDirectory(command, directory, args) {
+  return new Promise((resolve, reject) => {
+    const child = spawn(command, args, { cwd: directory });
+    let isDone = false;
+    const errorMessages = [];
+    child.on('error', (error) => {
+      if (!isDone) {
+        isDone = true;
+        reject(error);
+      }
+    });
+    child.stderr.on('data', (chunk) => errorMessages.push(chunk));
+    child.on('exit', (code) => {
+      if (!isDone) {
+        if (code === 0) {
+          resolve();
+        } else {
+          reject(`${errorMessages.join('')}${EOL}${command} exited with code ${code}`);
+        }
+      }
+    });
+  });
 }
