@@ -68,6 +68,7 @@ const workspace = process.env.GITHUB_WORKSPACE;
   const patchWords = process.env['INPUT_PATCH-WORDING'] ? process.env['INPUT_PATCH-WORDING'].split(',') : null;
   const preReleaseWords = process.env['INPUT_RC-WORDING'] ? process.env['INPUT_RC-WORDING'].split(',') : null;
   const extraVersionFile = isValidFilename(process.env['INPUT_EXTRA-VERSION-FILE']) ? process.env['INPUT_EXTRA-VERSION-FILE'] : '';
+  const specificVersion = process.env['INPUT_SPECIFIC-VERSION'];
 
   console.log('config words:', { majorWords, minorWords, patchWords, preReleaseWords });
   console.log('Extra Version File:', extraVersionFile);
@@ -78,8 +79,12 @@ const workspace = process.env.GITHUB_WORKSPACE;
   // get the pre-release prefix specified in action
   let preid = process.env.INPUT_PREID;
 
+  // case if specific-version found
+  if (specificVersion) {
+    version = specificVersion;
+  }
   // case if version-type found
-  if (versionType) {
+  else if (versionType) {
     version = versionType;
   }
   // case: if wording for MAJOR found

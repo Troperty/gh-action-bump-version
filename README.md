@@ -203,6 +203,19 @@ Example:
     extra-package-dir: './packages/server/:./packages/client/'
 ```
 
+#### **specific-version:**
+Writes specific version to `package.json` file instead of inferring new version from commit-messages or other parameters.
+
+Example:
+```yaml
+- name:  'Automated Version Bump'
+  uses:  'Troperty/gh-action-bump-version@master'
+  env:
+    GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+  with:
+    specific-version: '2.0.0'
+```
+
 #### [DEPRECATED] **push:**
 **DEPRECATED** Set false you want to avoid pushing the new version tag/package.json. Example:
 ```yaml

@@ -74,6 +74,10 @@ inputs:
     description: 'Additional package.json files for version bump'
     default: ''
     required: false
+  specific-version:
+    description: 'Bump package to specific version instead of inferring new version'
+    default: ''
+    required: false
   push:
     description: '[DEPRECATED] Set to false to skip pushing the new tag'
     default: 'true'
