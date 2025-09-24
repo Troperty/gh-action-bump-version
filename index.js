@@ -232,7 +232,7 @@ const workspace = process.env.GITHUB_WORKSPACE;
     console.log('newVersion 2:', newVersion);
     newVersion = `${tagPrefix}${newVersion}`;
     console.log(`newVersion after merging tagPrefix+newVersion: ${newVersion}`);
-    console.log(`::set-output name=newTag::${newVersion}`);
+    // console.log(`::set-output name=newTag::${newVersion}`);
 
     if (extraVersionFile !== '') {
       await runInWorkspace('touch', [extraVersionFile]);
